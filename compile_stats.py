@@ -5,9 +5,9 @@ Created on Oct 13, 2010
 '''
 from config import CASES, MAIN_DATADIR, MAP, RESOLUTION, COMPILED_STATS_FILENAME,\
     MIN_OPTICAL_DEPTH, CCI_CLOUD_VALIDATION,\
-    DNT_FLAG, CALIPSO_CLOUD_FRACTION,COMPILE_RESULTS_SEPARATELY_FOR_SINGLE_LAYERS_ETC,\
-    ALSO_USE_5KM_FILES, RESULT_DIR
-
+    DNT_FLAG, CALIPSO_CLOUD_FRACTION, COMPILE_RESULTS_SEPARATELY_FOR_SINGLE_LAYERS_ETC,\
+    ALSO_USE_5KM_FILES, SPARC_CLOUD_VALIDATION,\
+    NAIVE_CLOUD_VALIDATION, RESULT_DIR
 
 def compile_filtered_stats(results_files, filttype, write=False):
     """Run through all summary statistics."""
@@ -31,7 +31,7 @@ def compile_filtered_stats(results_files, filttype, write=False):
 
 def compile_surface_stats(results_files, surfacetype, write=False):
     """Run through all summary statistics."""
-
+    
     print("=========== Cloud fraction ============")
     from statistics import orrb_CFC_stat_surfaces
     cfc_stats = orrb_CFC_stat_surfaces.CloudFractionSurfacesStats(results_files)
@@ -63,13 +63,13 @@ def compile_basic_stats(results_files, result_end, write=False):
     
     print("========== Cloud top height ===========")
     from statistics import orrb_CTH_stat
-    cth_stats = orrb_CTH_stat.CloudTopStats(results_files, [16,17,18,19])
+    cth_stats = orrb_CTH_stat.CloudTopStats(results_files, [16,17,18,19])    
     if write:
         cth_stats.write(COMPILED_STATS_FILENAME + '_cth_BASIC%s.txt' %result_end)
     cth_stats.printout()
     for l in cth_stats.printout():
         print(l)
-
+    
     if COMPILE_RESULTS_SEPARATELY_FOR_SINGLE_LAYERS_ETC:
             print("========== Cloud top height ===========")
             print("========== Single Layer     ===========")
@@ -113,8 +113,7 @@ def compile_basic_stats(results_files, result_end, write=False):
             for l in cth_stats.printout():
                 print(l)
 
-    
-    if not CCI_CLOUD_VALIDATION:
+    if not CCI_CLOUD_VALIDATION and not SPARC_CLOUD_VALIDATION and not NAIVE_CLOUD_VALIDATION:
         print("============= Cloud type ==============")
         from statistics import orrb_CTY_stat
         cty_stats = orrb_CTY_stat.CloudTypeStats(results_files, cfc_stats)
@@ -142,14 +141,14 @@ def compile_cotfilter_stats(results_files, result_end, write=False):
     
     print("========== Cloud top height ===========")
     from statistics import orrb_CTH_stat
-    cth_stats = orrb_CTH_stat.CloudTopStats(results_files)
+    cth_stats = orrb_CTH_stat.CloudTopStats(results_files, [16,17,18,19])
     if write:
         cth_stats.write(COMPILED_STATS_FILENAME + '_cth_cotfilter%s.txt' %result_end)
     cth_stats.printout()
     for l in cth_stats.printout():
         print(l)
     
-    if not CCI_CLOUD_VALIDATION:
+    if not CCI_CLOUD_VALIDATION and not SPARC_CLOUD_VALIDATION and not NAIVE_CLOUD_VALIDATION:
         print("============= Cloud type ==============")
         from statistics import orrb_CTY_stat
         cty_stats = orrb_CTY_stat.CloudTypeStats(results_files, cfc_stats)
@@ -169,8 +168,8 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-w', '--write', action='store_true',
                       help="Write results to file")
-##    parser.add_option('-b', '--no-basic', action='store_true',
-##                      help="don't calculate the statistic for mode BASIC")
+##     parser.add_option('-b', '--no-basic', action='store_true',
+##                       help="don't calculate the statistic for mode BASIC")
     parser.add_option('-b', '--basic', action='store_true',  # I prefer this one!/KG
                       help="Calculate the statistic for mode BASIC")
     parser.add_option('-t', '--standard', action='store_true',  
@@ -200,7 +199,7 @@ if __name__ == '__main__':
             results_files = []
             for case in CASES:
                 basic_indata_dir = "%s/%s/%s/%skm/%s/%02d/%s/BASIC" % \
-                    (MAIN_DATADIR, RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
+                    (MAIN_DATADIR,RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
                 if dnt in [None, 'ALL', 'all']:
                     result_end = ''
                 else:
@@ -211,12 +210,13 @@ if __name__ == '__main__':
                     results_files.extend(glob("%s/CCF_%skm*.dat" %(basic_indata_dir, RESOLUTION)))
                 else:
                     results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
-            if not CCI_CLOUD_VALIDATION:
+            if (not CCI_CLOUD_VALIDATION) and (not SPARC_CLOUD_VALIDATION) and (not NAIVE_CLOUD_VALIDATION):
                 cfc_stats, cth_stats, cty_stats = compile_basic_stats(results_files, result_end, write=options.write)
             else:
+                print "Results files: ", results_files
                 cfc_stats, cth_stats = compile_basic_stats(results_files, result_end, write=options.write)        
             print('')
-
+            
     if options.standard == True: # I prefer this one! /KG
         print('Calculate statistic for mode STANDARD')
         print(RESOLUTION)
@@ -224,7 +224,7 @@ if __name__ == '__main__':
             results_files = []
             for case in CASES:
                 basic_indata_dir = "%s/%s/%s/%skm/%s/%02d/%s/STANDARD" % \
-                    (MAIN_DATADIR, RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
+                    (MAIN_DATADIR,RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
                 if dnt in [None, 'ALL', 'all']:
                     result_end = ''
                 else:
@@ -235,7 +235,7 @@ if __name__ == '__main__':
                     results_files.extend(glob("%s/CCF_%skm*.dat" %(basic_indata_dir, RESOLUTION)))
                 else:
                     results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
-            if not CCI_CLOUD_VALIDATION:
+            if (not CCI_CLOUD_VALIDATION) and (not SPARC_CLOUD_VALIDATION) and (not NAIVE_CLOUD_VALIDATION):
                 cfc_stats, cth_stats, cty_stats = compile_basic_stats(results_files, result_end, write=options.write)
             else:
                 cfc_stats, cth_stats = compile_basic_stats(results_files, result_end, write=options.write)        
@@ -248,7 +248,7 @@ if __name__ == '__main__':
             results_files = []
             for case in CASES:
                 basic_indata_dir = "%s/%s/%s/%skm/%s/%02d/%s/OPTICAL_DEPTH_THIN_IS_CLEAR" % \
-                    (MAIN_DATADIR, RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
+                    (MAIN_DATADIR,RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0])
                 if dnt in [None, 'ALL', 'all']:
                     result_end = ''
                 else:
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                     results_files.extend(glob("%s/CCF_%skm*.dat" %(basic_indata_dir, RESOLUTION)))
                 else:
                     results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
-            if not CCI_CLOUD_VALIDATION:
+            if (not CCI_CLOUD_VALIDATION) and (not SPARC_CLOUD_VALIDATION) and (not NAIVE_CLOUD_VALIDATION):
                 cfc_stats, cth_stats, cty_stats = compile_basic_stats(results_files, result_end, write=options.write)
             else:
                 cfc_stats, cth_stats = compile_basic_stats(results_files, result_end, write=options.write)        
@@ -285,12 +285,12 @@ if __name__ == '__main__':
                         results_files.extend(glob("%s/CCF_%skm*.dat" %(basic_indata_dir, RESOLUTION)))
                     else:
                         results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
-                if not CCI_CLOUD_VALIDATION:
+                if (not CCI_CLOUD_VALIDATION) and (not SPARC_CLOUD_VALIDATION) and (not NAIVE_CLOUD_VALIDATION):
                     cfc_stats, cth_stats, cty_stats = compile_basic_stats(results_files, result_end, write=options.write)
                 else:
                     cfc_stats, cth_stats = compile_basic_stats(results_files, result_end, write=options.write) 
                 print('')
-            
+
     if options.surface == True:
         from config import SURFACES
         print('Calculate statistic for the different surfaces')
@@ -311,11 +311,12 @@ if __name__ == '__main__':
                         results_files.extend(glob("%s/CCF_%skm*.dat" %(basic_indata_dir, RESOLUTION)))
                     else:
                         results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
+                        
                 cfc_stats, cth_stats = compile_surface_stats(results_files, result_end, write=options.write)
                 print('')
     
     if options.filter == True:
-        from config import FILTERTYPE
+        from config import FILTERTYPE, MIN_OPTICAL_DEPTH
         print('Calculate statistic for the different surfaces')
         for filttype in FILTERTYPE:
             for dnt in DNT_FLAG:
@@ -323,7 +324,7 @@ if __name__ == '__main__':
                 for case in CASES:
                     print(RESOLUTION)
                     basic_indata_dir = "%s/%s/%s/%skm/%s/%02d/%s/%s" % \
-                    (MAIN_DATADIR, RESULT_DIR, case['satname'],  RESOLUTION , case['year'], case['month'], MAP[0], filttype)
+                    (MAIN_DATADIR, RESULT_DIR, case['satname'], RESOLUTION , case['year'], case['month'], MAP[0], filttype)
                     if dnt in [None, 'ALL', 'all']:
                         result_end = filttype
                     else:
@@ -367,7 +368,7 @@ if __name__ == '__main__':
                     else:
                         results_files.extend(glob("%s/%skm*.dat" %(basic_indata_dir, RESOLUTION)))
 
-                if not CCI_CLOUD_VALIDATION:
+                if not CCI_CLOUD_VALIDATION and not SPARC_CLOUD_VALIDATION and not NAIVE_CLOUD_VALIDATION:
                     cfc_stats, cth_stats, cty_stats = compile_cotfilter_stats(results_files, result_end, write=options.write)
                 else:
                     cfc_stats, cth_stats = compile_cotfilter_stats(results_files, result_end, write=options.write)        

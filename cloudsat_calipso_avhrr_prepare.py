@@ -66,6 +66,8 @@ def CloudsatCloudOpticalDepth(cloud_top, cloud_base, optical_depth, cloud_fracti
                 # Removes the cloud values for all pixels that have a optical depth (integrated from the top) below MIN_OPTICAL_DEPTH and moves the first valid value to the first column and so on.
                 #if depthsum >= MIN_OPTICAL_DEPTh:
                 if depthsum >= min_optical_depth:
+                    #import pdb
+                    #pdb.set_trace()
                     new_cloud_top[0:(optical_depth.shape[0]-j),i] = cloud_top[j:,i]
                     new_cloud_base[0:(optical_depth.shape[0]-j),i] = cloud_base[j:,i]
                     # new_cloud_fraction[i] = 1

@@ -116,11 +116,15 @@ import numpy as np
 from numpy import NaN
 from config import (VAL_CPP,
                     PLOT_ONLY_PNG,
+                    SPARC_CLOUD_VALIDATION,
+                    SPARC_CLOUD_THRESHOLD,
+                    NAIVE_CLOUD_VALIDATION,
+                    NAIVE_CLOUD_THRESHOLD,
                     CCI_CLOUD_VALIDATION,
                     PPS_VALIDATION,
                     ALWAYS_USE_AVHRR_ORBIT_THAT_STARTS_BEFORE_CROSS,
                     USE_5KM_FILES_TO_FILTER_CALIPSO_DATA,
-                    PPS_FORMAT_2012_OR_ERLIER,
+                    PPS_FORMAT_2012_OR_EARLIER,
                     RESOLUTION)
 
 from radiance_tb_tables_kgtest import get_central_wavenumber
@@ -197,6 +201,12 @@ class NWPObj(object):
         self.nwp_t850 = None
         self.nwp_t950 = None
         self.nwp_ciwv = None
+        self.tsur = None
+        self.t500 = None
+        self.t700 = None
+        self.t850 = None
+        self.t950 = None
+        self.ciwv = None
         self.text_r06 = None
         self.text_t11 = None
         self.text_t37t12 = None
@@ -264,7 +274,7 @@ def get_satid_datetime_orbit_from_fname(avhrr_filename):
     #satname, _datetime, orbit = runutils.parse_scene(avhrr_filename)
     #returnd orbit as int, loosing leeding zeros, use %05d to get it right.
     # Get satellite name, time, and orbit number from avhrr_file
-    if PPS_VALIDATION and not PPS_FORMAT_2012_OR_ERLIER:
+    if PPS_VALIDATION and not PPS_FORMAT_2012_OR_EARLIER:
         sl_ = os.path.basename(avhrr_filename).split('_')
         date_time= datetime.strptime(sl_[5], '%Y%m%dT%H%M%S%fZ')
         values= {"satellite": sl_[3],
@@ -278,7 +288,7 @@ def get_satid_datetime_orbit_from_fname(avhrr_filename):
                  "time":date_time.strftime("%H%M"),
                  "ppsfilename":avhrr_filename}
         values['basename'] = values["satellite"] + "_" + values["date"] + "_" + values["time"] + "_" + values["orbit"]
-    if PPS_VALIDATION  and PPS_FORMAT_2012_OR_ERLIER:
+    if PPS_VALIDATION  and PPS_FORMAT_2012_OR_EARLIER:
         sl_ = os.path.basename(avhrr_filename).split('_')
         date_time= datetime.strptime(sl_[1] + sl_[2], '%Y%m%d%H%M')
         values= {"satellite": sl_[0],
@@ -308,6 +318,46 @@ def get_satid_datetime_orbit_from_fname(avhrr_filename):
                  "ccifilename":avhrr_filename,
                  "ppsfilename":None}
         values['basename'] = values["satellite"] + "_" + values["date"] + "_" + values["time"] + "_" + values["orbit"]
+
+    if NAIVE_CLOUD_VALIDATION:
+        # avhrr_file = noaa18_20061006_1800_99999_satproj_00000_13685_avhrr.h5
+        sl_ = os.path.basename(avhrr_filename).split('_')
+        #import pdb
+        #pdb.set_trace()
+        date_time= datetime.strptime(sl_[1] + sl_[2], '%Y%m%d%H%M')
+        values= {"satellite": sl_[0],
+                 "date_time": date_time,
+                 "orbit": sl_[3],
+                 "date":sl_[1],
+                 "year":date_time.year,
+                 "month":"%02d"%(date_time.month),  
+                 "lines_lines": sl_[5] + "_" + sl_[6],
+                 "time":sl_[2],
+                 "basename":sl_[0] + "_" + sl_[1] + "_" + sl_[2] + "_" + sl_[3],
+                 #"basename":sat_id + "_" + date_time.strftime("%Y%m%d_%H%M_99999"),#"20080613002200-ESACCI",
+                 "naivefilename":avhrr_filename,
+                 "ppsfilename":avhrr_filename}
+
+    if SPARC_CLOUD_VALIDATION:
+        # avhrr_file = noaa18_20061006_1800_99999_satproj_00000_13685_avhrr.h5
+        sl_ = os.path.basename(avhrr_filename).split('_')
+        #import pdb
+        #pdb.set_trace()
+        date_time= datetime.strptime(sl_[1] + sl_[2], '%Y%m%d%H%M')
+        values= {"satellite": sl_[0],
+                 "date_time": date_time,
+                 "orbit": sl_[3],
+                 "date":sl_[1],
+                 "year":date_time.year,
+                 "month":"%02d"%(date_time.month),  
+                 "lines_lines": sl_[5] + "_" + sl_[6],
+                 "time":sl_[2],
+                 "basename":sl_[0] + "_" + sl_[1] + "_" + sl_[2] + "_" + sl_[3],
+                 #"basename":sat_id + "_" + date_time.strftime("%Y%m%d_%H%M_99999"),#"20080613002200-ESACCI",
+                 "sparcfilename":avhrr_filename,
+                 "ppsfilename":avhrr_filename}
+
+
 
 
     return values
@@ -424,6 +474,28 @@ def find_cci_cloud_file(cross, options):
     if not found_file:
         raise MatchupError("No dir or file found with cci cloud data!\n" + 
                            "Searching under %s" % options['cci_dir'])
+    return found_file, tobj
+
+def find_naive_cloud_file(cross, options):
+    import pdb
+    #pdb.set_trace()
+    found_file, tobj= find_avhrr_file(cross, 
+                                      options['prob_dir'], 
+                                      options['prob_file'])
+    if not found_file:
+        raise MatchupError("No dir or file found with Naive cloud data!\n" + 
+                           "Searching under %s" % options['prob_dir'])
+    return found_file, tobj
+
+def find_sparc_cloud_file(cross, options):
+    import pdb
+    #pdb.set_trace()
+    found_file, tobj= find_avhrr_file(cross, 
+                                      options['prob_dir'], 
+                                      options['prob_file'])
+    if not found_file:
+        raise MatchupError("No dir or file found with SPARC cloud data!\n" + 
+                           "Searching under %s" % options['prob_dir'])
     return found_file, tobj
 
 def find_avhrr_file(cross, filedir_pattern, filename_pattern, values={}):
@@ -685,7 +757,6 @@ def get_calipso_matchups(calipso_files, values,
     """
     Read Calipso data and match with the given PPS data.
     """
-    surft = nwp_obj.surft
     if cafiles1km != None:
         #pdb.set_trace()
         calipso1km = reshapeCalipso(cafiles1km, avhrrGeoObj, values, False, 1)[0]
@@ -846,6 +917,68 @@ def read_cloud_cci(avhrr_file):
     from read_cloudproducts_cci import cci_read_all
     return cci_read_all(avhrr_file)
 
+def read_cloud_naive(pps_files,cross,avhrr_file,threshold,options):
+    from read_cloudproducts_naive import naive_read_prob
+    import pps_io #@UnresolvedImport
+    import epshdf #@UnresolvedImport
+    write_log("INFO","Read AVHRR geolocation data")
+    avhrrGeoObj = pps_io.readAvhrrGeoData(avhrr_file)    
+    write_log("INFO","Read AVHRR Sun -and Satellites Angles data")
+    avhrrAngObj = pps_io.readSunSatAngles(pps_files.sunsatangles) #, withAbsoluteAzimuthAngles=True)
+    if 'npp' in [cross.satellite1, cross.satellite2]:
+        write_log("INFO","Read VIIRS data")
+        avhrrObj = pps_io.readViirsData(avhrr_file)
+    else:
+        write_log("INFO","Read AVHRR data")
+        avhrrObj = pps_io.readAvhrrData(avhrr_file)    
+    cppLwp = None
+    cppCph = None
+    surft = None
+    write_log("INFO","Read PPS Cloud Type")
+    ctype_PPS = epshdf.read_cloudtype(pps_files.cloudtype, 1, 1, 0)
+    write_log("INFO","Read Naive Cloud Type")
+    ctype = naive_read_prob(avhrr_file,threshold,options["prob_result_dir"],ctype_PPS)
+                          #Just replacing standard PPS Ctype with Naive-based where
+                          #probabilities above PROB_threshold is set to value 9 /KG 20130909
+    write_log("INFO","Read PPS CTTH")
+    try:
+        ctth = epshdf.read_cloudtop(pps_files.ctth, 1, 1, 1, 0, 1)
+    except:
+        ctth = None  
+
+    return avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, surft, cppLwp, cppCph 
+
+def read_cloud_sparc(pps_files,cross,avhrr_file,threshold,options):
+    from read_cloudproducts_sparc import sparc_read_prob
+    import pps_io #@UnresolvedImport
+    import epshdf #@UnresolvedImport
+    write_log("INFO","Read AVHRR geolocation data")
+    avhrrGeoObj = pps_io.readAvhrrGeoData(avhrr_file)    
+    write_log("INFO","Read AVHRR Sun -and Satellites Angles data")
+    avhrrAngObj = pps_io.readSunSatAngles(pps_files.sunsatangles) #, withAbsoluteAzimuthAngles=True)
+    if 'npp' in [cross.satellite1, cross.satellite2]:
+        write_log("INFO","Read VIIRS data")
+        avhrrObj = pps_io.readViirsData(avhrr_file)
+    else:
+        write_log("INFO","Read AVHRR data")
+        avhrrObj = pps_io.readAvhrrData(avhrr_file)    
+    cppLwp = None
+    cppCph = None
+    surft = None
+    write_log("INFO","Read PPS Cloud Type")
+    ctype_PPS = epshdf.read_cloudtype(pps_files.cloudtype, 1, 1, 0)
+    write_log("INFO","Read SPARC Cloud Type")
+    ctype = sparc_read_prob(avhrr_file,threshold,options["prob_result_dir"],ctype_PPS)
+                          #Just replacing standard PPS Ctype with SPARC-based where
+                          #probabilities above PROB_threshold is set to value 9 /KG 20130909
+    write_log("INFO","Read PPS CTTH")
+    try:
+        ctth = epshdf.read_cloudtop(pps_files.ctth, 1, 1, 1, 0, 1)
+    except:
+        ctth = None  
+
+    return avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, surft, cppLwp, cppCph 
+
 def get_matchups_from_data(cross, config_options):
     """
     Retrieve Cloudsat- and Calipso-AVHRR matchups from Cloudsat, Calipso, and
@@ -865,8 +998,24 @@ def get_matchups_from_data(cross, config_options):
         #avhrr_file = "20080613002200-ESACCI-L2_CLOUD-CLD_PRODUCTS-AVHRRGAC-NOAA18-fv1.0.nc"
         values = get_satid_datetime_orbit_from_fname(avhrr_file)
         avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, surft, cppLwp, cppCph =read_cloud_cci(avhrr_file)
-        nwp_obj = NWPObj({'surft':surft})        
+        nwp_obj = NWPObj({'surft':surft})
         avhrrGeoObj.satellite = values["satellite"];
+        date_time = values["date_time"]
+    if (NAIVE_CLOUD_VALIDATION):
+        avhrr_file, tobj = find_naive_cloud_file(cross, config_options)
+        values = get_satid_datetime_orbit_from_fname(avhrr_file)
+        pps_files = find_files_from_avhrr(avhrr_file, config_options)   
+        avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, nwp_obj, cppLwp, cppCph =read_cloud_naive(pps_files,cross,avhrr_file,NAIVE_CLOUD_THRESHOLD,config_options)
+        avhrrGeoObj.satellite = values["satellite"];
+        nwp_obj = NWPObj({'surft':None})
+        date_time = values["date_time"]
+    if (SPARC_CLOUD_VALIDATION):
+        avhrr_file, tobj = find_sparc_cloud_file(cross, config_options)
+        values = get_satid_datetime_orbit_from_fname(avhrr_file)
+        pps_files = find_files_from_avhrr(avhrr_file, config_options)   
+        avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, nwp_obj, cppLwp, cppCph =read_cloud_sparc(pps_files,cross,avhrr_file,SPARC_CLOUD_THRESHOLD,config_options)
+        avhrrGeoObj.satellite = values["satellite"];
+        nwp_obj = NWPObj({'surft':None})
         date_time = values["date_time"]
 
     calipso_files = find_calipso_files(date_time, config_options, values)
@@ -884,7 +1033,7 @@ def get_matchups_from_data(cross, config_options):
             write_log("INFO", "NO CLOUDSAT File, Continue")
     else:
         write_log("INFO", "NO CLOUDSAT File,"
-                  "CCI-cloud validation only for calipso, Continue")
+                  "CCI, Naive or SPARC cloud validation only for calipso, Continue")
 
     if (isinstance(calipso_files, str) == True or 
         (isinstance(calipso_files, list) and len(calipso_files) != 0)):
@@ -1077,7 +1226,7 @@ def get_matchups(cross, options, reprocess=False):
             basename = '_'.join(os.path.basename(cl_match_file).split('_')[1:5])
             if diff_avhrr is None or (
                 matchup_diff_seconds<=diff_avhrr_seconds or 
-                matchup_diff_seconds<300):
+                abs(matchup_diff_seconds-diff_avhrr_seconds) <300):
                 write_log('INFO', "CloudSat Matchups read from previously " + 
                           "processed data.")
                 date_time=tobj
@@ -1108,8 +1257,8 @@ def get_matchups(cross, options, reprocess=False):
             basename = '_'.join(os.path.basename(ca_match_file).split('_')[1:5])
             print matchup_diff_seconds, diff_avhrr_seconds
             if diff_avhrr_seconds is None or (
-                matchup_diff_seconds<=diff_avhrr_seconds 
-                or matchup_diff_seconds<300):
+                matchup_diff_seconds<=diff_avhrr_seconds or 
+                abs(matchup_diff_seconds-diff_avhrr_seconds) <300):
                 write_log('INFO', 
                           "CALIPSO Matchups read from previously processed data.")
                 write_log('INFO', 'Filename: ' + ca_match_file)
@@ -1262,6 +1411,7 @@ def run(cross, process_mode_dnt, config_options, min_optical_depth, reprocess=Fa
     # Now fetch all the datasets for the section of the AREA where all
     # three datasets match. Also get maximum and minimum time differences to AVHRR (in seconds)
     matchup_results = get_matchups(cross, config_options, reprocess)
+    #pdb.set_trace()
     caObj = matchup_results['calipso']
     clsatObj = matchup_results['cloudsat']
     values = matchup_results['values']

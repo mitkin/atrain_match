@@ -16,6 +16,9 @@ from config import (OPTICAL_DETECTION_LIMIT,
                     SET_TO_CLEAR_CALIPSO_PIXEL_IF_TOTAL_OPTICAL_THICKNESS_TO_LOW,
                     USE_5KM_FILES_TO_FILTER_CALIPSO_DATA,
                     PPS_VALIDATION,
+                    NAIVE_CLOUD_VALIDATION,
+                    SPARC_CLOUD_VALIDATION,
+                    PPS_FORMAT_2012_OR_EARLIER,
                     IMAGER_INSTRUMENT)
 EXCLUDE_GEOMETRICALLY_THICK = False
 import time as tm
@@ -403,7 +406,9 @@ def createAvhrrTime(Obt, values):
             """
             Obt.sec1970_end = int(DSEC_PER_AVHRR_SCALINE * Obt.num_of_lines + Obt.sec1970_start)
         
-        if values["ppsfilename"].split('_')[-3] != '00000':
+        if ((values["ppsfilename"].split('_')[-3] != '00000' and PPS_FORMAT_2012_OR_EARLIER) or
+            (values["ppsfilename"].split('_')[-2] != '00000' and not PPS_FORMAT_2012_OR_EARLIER)):
+
             """
             This if statement takes care of a bug in start and end time, 
             that occurs when a file is cut at midnight
@@ -853,7 +858,7 @@ def match_calipso_avhrr(values,
     calnan = np.where(cal == NODATA, np.nan, cal)
     if (~np.isnan(calnan)).sum() == 0:
         raise MatchupError("No matches within region.")
-    if (PPS_VALIDATION):
+    if (PPS_VALIDATION or NAIVE_CLOUD_VALIDATION or SPARC_CLOUD_VALIDATION):
         #CCIcloud already have time as array.
         imagerGeoObj = createAvhrrTime(imagerGeoObj, values)
     
@@ -947,6 +952,7 @@ def match_calipso_avhrr(values,
     N_lse = x_lse.shape[0]/col_dim
     retv.calipso.lidar_surface_elevation = np.reshape(x_lse,(col_dim,N_lse)).astype('d')
 
+    col_dim = calipsoObj.cloud_mid_temperature.shape[1]
     if res == 5:
         x_od = np.repeat(calipsoObj.optical_depth[::,0],idx_match)
         x_odu = np.repeat(calipsoObj.optical_depth_uncertainty[::,0],idx_match)
@@ -1261,7 +1267,7 @@ def reshapeCalipso(calipsofiles, avhrr, values, timereshape = True, res=resoluti
     import sys
     
     cal= CalipsoObject()
-    if (PPS_VALIDATION):
+    if (PPS_VALIDATION or NAIVE_CLOUD_VALIDATION or SPARC_CLOUD_VALIDATION):
         avhrr = createAvhrrTime(avhrr, values)
     avhrr_end = avhrr.sec1970_end
     avhrr_start = avhrr.sec1970_start
