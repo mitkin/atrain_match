@@ -166,6 +166,8 @@ class ppsFiles(object):
         self.nwp_ciwv = None
         self.text_r06 = None
         self.text_t11 = None
+        self.text_t37t12 = None
+        self.text_t37 = None
         self.thr_t11ts_inv = None
         self.thr_t11t37_inv = None
         self.thr_t37t12_inv = None
@@ -174,6 +176,8 @@ class ppsFiles(object):
         self.thr_t11t37 = None
         self.thr_t37t12 = None
         self.thr_t11t12 = None
+        self.thr_r06 = None
+        self.thr_r09 = None
         self.__dict__.update(file_name_dict)    
 
 class NWPObj(object):
@@ -182,6 +186,8 @@ class NWPObj(object):
         self.nwp_ciwv = None
         self.text_r06 = None
         self.text_t11 = None
+        self.text_t37t12 = None
+        self.text_t37 = None
         self.thr_t11ts_inv = None
         self.thr_t11t37_inv = None
         self.thr_t37t12_inv = None
@@ -190,6 +196,8 @@ class NWPObj(object):
         self.thr_t11t37 = None
         self.thr_t37t12 = None
         self.thr_t11t12 = None
+        self.thr_r06 = None
+        self.thr_r09 = None
         self.__dict__.update(array_dict) 
 
 test = 0
@@ -239,11 +247,10 @@ def find_calipso_files_inner(date_time, time_window, options, values):
     return flist
 
 def get_satid_datetime_orbit_from_fname(avhrr_filename):
-    import runutils
+    #import runutils
     #satname, _datetime, orbit = runutils.parse_scene(avhrr_filename)
     #returnd orbit as int, loosing leeding zeros, use %05d to get it right.
     # Get satellite name, time, and orbit number from avhrr_file
-
     if PPS_VALIDATION:
         sl_ = os.path.basename(avhrr_filename).split('_')
         date_time= datetime.strptime(sl_[1] + sl_[2], '%Y%m%d%H%M')
@@ -279,10 +286,11 @@ def get_satid_datetime_orbit_from_fname(avhrr_filename):
 
 def insert_info_in_filename_or_path(file_or_name_path, values, datetime_obj=None):
     #file_or_name_path = file_or_name_path.format(**values)
+    satellite=values.get("satellite","*")
     file_or_name_path = file_or_name_path.format(
-        satellite=values["satellite"],
+        satellite=satellite,
         orbit=values.get("orbit","*"),
-        instrument = INSTRUMENT.get(values["satellite"],"avhrr"),
+        instrument = INSTRUMENT.get(satellite,"avhrr"),
         resolution=config.RESOLUTION,
         area=config.AREA,
         lines_lines=values.get("lines_lines", "*"),
@@ -560,13 +568,14 @@ def find_files_from_avhrr(avhrr_file, options):
                                                  nwp_file+'_file', nwp_file+'_dir')
 
 
-    for text_file in ['text_r06', 'text_t11']:
+    for text_file in ['text_r06', 'text_t11', 'text_t37t12', 'text_t37']:
         file_name_dict[text_file] = get_pps_file(avhrr_file, options, values, 
                                                  text_file+'_file', 'text_dir')
 
     for thr_file in ['thr_t11ts_inv', 'thr_t11t37_inv', 
                      'thr_t37t12_inv', 'thr_t11t12_inv', 
-                     'thr_t11ts', 'thr_t11t37', 'thr_t37t12', 'thr_t11t12']:
+                     'thr_t11ts', 'thr_t11t37', 'thr_t37t12', 'thr_t11t12',
+                     'thr_r09', 'thr_r06']:
         file_name_dict[thr_file] = get_pps_file(avhrr_file, options, values, 
                                                 thr_file+'_file', 'thr_dir')
  
@@ -751,12 +760,13 @@ def read_pps_data(pps_files, avhrr_file, cross):
     nwp_dict['ciwv'] = read_nwp(pps_files.nwp_ciwv,  "atmosphere_water_vapor_content")
 
 
-    for ttype in ['r06', 't11']:
+    for ttype in ['r06', 't11', 't37t12', 't37']:
         h5_obj_type = ttype +'_text'
         text_type = 'text_' + ttype
         nwp_dict[text_type] = read_thr(getattr(pps_files,text_type), h5_obj_type,text_type)
     for h5_obj_type in ['t11ts_inv', 't11t37_inv', 't37t12_inv', 't11t12_inv', 
-                     't11ts', 't11t37', 't37t12', 't11t12']:
+                        't11ts', 't11t37', 't37t12', 't11t12',
+                        'r09', 'r06']:
         thr_type = 'thr_' + h5_obj_type
         nwp_dict[thr_type] = read_thr(getattr(pps_files,thr_type), h5_obj_type, thr_type)
 
@@ -765,8 +775,8 @@ def read_pps_data(pps_files, avhrr_file, cross):
     return avhrrAngObj, ctth, avhrrGeoObj, ctype, avhrrObj, nwp_obj, cppLwp, cppCph 
 
 def read_cloud_cci(avhrr_file):
-    from read_cloudproducts_cci import cci_read_ctth
-    return cci_read_ctth(avhrr_file)
+    from read_cloudproducts_cci import cci_read_all
+    return cci_read_all(avhrr_file)
 
 def get_matchups_from_data(cross, config_options):
     """
