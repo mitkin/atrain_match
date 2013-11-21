@@ -80,7 +80,6 @@ t86t12 = np.ma.array(t86 - t12, mask=maskdata)
 #t11t12 = np.ma.array(t11 - t12 - (thr_t11t12 + thr_t11t12_inv)/2.0, mask=maskdata)
 
 
-# Masking out what is not a cloud ==> gives all cloudy pixels
 t11t12_cloud = np.ma.masked_where(isCloud==False, t11t12).compressed()
 t86t12_cloud = np.ma.masked_where(isCloud==False, t86t12).compressed()
 #t11t12_clear = np.ma.masked_where(isCloud==True, t11t12).compressed()
